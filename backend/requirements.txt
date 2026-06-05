@@ -1,0 +1,29 @@
+# ─────────────────────────────────────────────────────────────────
+# requirements.txt
+# All Python dependencies for the SkillAI FastAPI backend.
+# Install with:  pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────────
+
+fastapi==0.115.5          # Modern, fast web framework for building APIs
+uvicorn[standard]==0.32.1 # ASGI server to run FastAPI (with auto-reload support)
+pydantic==2.10.3          # Data validation / request & response schemas
+python-dotenv==1.0.1      # Load environment variables from a .env file
+
+# ── ML stack ──────────────────────────────────────────────────────
+pandas==2.2.3             # Dataset loading and feature engineering
+scikit-learn==1.5.2       # RandomForestClassifier, preprocessing, metrics
+joblib==1.4.2             # Save/load trained model (faster than pickle for NumPy)
+numpy==2.1.3              # Numeric operations used by scikit-learn
+
+# ── Resume Analysis stack ──────────────────────────────────────────
+pdfplumber                # Extract text from PDF files
+python-docx               # Extract text from DOCX files
+python-multipart          # Required by FastAPI for multipart/form-data file uploads
+
+# ── Database stack ────────────────────────────────────────────────
+sqlalchemy==2.0.36        # ORM for SQLite (dev) and PostgreSQL (prod)
+
+# ── Authentication stack (Phase 6) ────────────────────────────────
+python-jose[cryptography] # JWT creation and verification (HS256)
+passlib[bcrypt]           # bcrypt password hashing — industry standard
+bcrypt==4.2.1             # passlib is not yet compatible with bcrypt 5.x
