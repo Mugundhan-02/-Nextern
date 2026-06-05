@@ -1,7 +1,15 @@
+<<<<<<< HEAD
 node_modules
 *.pkl
 *.joblib
-node_modules/
-datasets/
-skillai.db
+node_modul 
 .env
+skillai.db
+datasets/
+*.pkl
+*.joblib
+dist/
+build/
+venv/
+.venv/
+>>>>>>> f5f4b15 (Initial SkillAI commit)
