@@ -254,3 +254,58 @@
   transform: rotate(45deg);
   animation: shine 4s ease-in-out infinite;
 }
+
+/* ── Dashboard Career Intelligence Animations ─────────────────────────── */
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulseRing {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0;   }
+}
+
+@keyframes progressGrow {
+  from { width: 0%; }
+}
+
+.anim-slide-up-0  { animation: slideUpFade 0.55s ease-out 0.05s both; }
+.anim-slide-up-1  { animation: slideUpFade 0.55s ease-out 0.12s both; }
+.anim-slide-up-2  { animation: slideUpFade 0.55s ease-out 0.20s both; }
+.anim-slide-up-3  { animation: slideUpFade 0.55s ease-out 0.28s both; }
+.anim-slide-up-4  { animation: slideUpFade 0.55s ease-out 0.36s both; }
+.anim-slide-up-5  { animation: slideUpFade 0.55s ease-out 0.44s both; }
+.anim-slide-up-6  { animation: slideUpFade 0.55s ease-out 0.52s both; }
+.anim-slide-up-7  { animation: slideUpFade 0.55s ease-out 0.60s both; }
+.anim-float       { animation: floatY 4s ease-in-out infinite; }
+.anim-float-slow  { animation: floatY 6s ease-in-out infinite; }
+.anim-pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulseRing 1.8s ease-out infinite;
+}
+.progress-animated { animation: progressGrow 1.2s ease-out both; }
+.gradient-text-hero {
+  background: linear-gradient(135deg, #818cf8, #c084fc, #67e8f9, #818cf8);
+  background-size: 300% 300%;
+  animation: gradientShift 6s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

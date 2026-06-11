@@ -18,6 +18,23 @@ import models
 from schemas import PredictRequest, PredictResponse
 
 
+def _utc_iso(dt) -> str | None:
+    """Serialise a datetime → ISO 8601 string with explicit +00:00 UTC suffix.
+
+    SQLite stores naive datetimes (no tzinfo). Python's isoformat() on a naive
+    datetime emits "2026-06-11T12:30:00" — no suffix. JavaScript's Date() then
+    treats it as *local* time, so IST users see timestamps 5 h 30 m too late.
+
+    By tagging naive datetimes as UTC before calling isoformat() we get
+    "2026-06-11T12:30:00+00:00", which JS always interprets as UTC.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -251,7 +268,7 @@ def serialize_user(u: models.User) -> dict:
         "email":          u.email,
         "degree_program": u.degree_program,
         "specialization": u.specialization,
-        "created_at":     u.created_at.isoformat() if u.created_at else None,
+        "created_at":     _utc_iso(u.created_at),
         "total_predictions":    len(u.predictions),
         "total_resume_analyses": len(u.resume_analyses),
         "best_prediction_score": max(
@@ -279,7 +296,7 @@ def serialize_prediction(p: models.PlacementPrediction) -> dict:
         "recommendation":   p.recommendation,
         "company_matches":  _pj(p.company_matches),
         "skill_gaps":       _pj(p.skill_gaps),
-        "created_at":       p.created_at.isoformat() if p.created_at else None,
+        "created_at":       _utc_iso(p.created_at),
     }
 
 
@@ -298,5 +315,5 @@ def serialize_resume(r: models.ResumeAnalysis) -> dict:
         "has_education":    r.has_education,
         "has_experience":   r.has_experience,
         "has_projects":     r.has_projects,
-        "created_at":       r.created_at.isoformat() if r.created_at else None,
+        "created_at":       _utc_iso(r.created_at),
     }

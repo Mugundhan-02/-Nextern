@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import ChartCard from '../components/ChartCard'
 import { useAuth } from '../context/AuthContext'
+import { formatFullDatetime, formatShortDate, formatShortTime } from '../utils/formatDate'
 
 const API = 'http://127.0.0.1:8000/api/v1'
 
@@ -134,7 +135,7 @@ function DetailDrawer({ record, onClose }) {
         )}
 
         <p className="text-xs text-slate-600 mt-4">
-          Analyzed: {new Date(record.created_at).toLocaleString('en-IN')}
+          Analyzed: {formatFullDatetime(record.created_at)}
         </p>
       </div>
     </div>
@@ -240,10 +241,10 @@ export default function ResumeHistory() {
 
                 <div className="text-right flex-shrink-0 hidden sm:block">
                   <p className="text-xs text-slate-500">
-                    {new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
+                    {formatShortDate(r.created_at)}
                   </p>
                   <p className="text-xs text-slate-600 mt-0.5">
-                    {new Date(r.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {formatShortTime(r.created_at)}
                   </p>
                 </div>
 

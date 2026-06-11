@@ -3,12 +3,12 @@
 // Global authentication context for SkillAI.
 //
 // Provides:
-//   user        — decoded user object from the JWT / /auth/me
-//   token       — raw JWT string (null if logged out)
-//   loading     — true while an auth request is in-flight
-//   login()     — POST /auth/login → persist token + user
-//   register()  — POST /auth/register → persist token + user
-//   logout()    — clear token + user from memory & localStorage
+//   user          — decoded user object from the JWT / /auth/me
+//   token         — raw JWT string (null if logged out)
+//   loading       — true while an auth request is in-flight
+//   login()       — POST /auth/login → persist token + user
+//   register()    — POST /auth/register → persist token + user
+//   logout()      — clear token + user from memory & localStorage
 //   authHeaders() — returns headers object with Bearer token
 //   refreshUser() — re-fetch /auth/me and update user state
 //
@@ -39,7 +39,6 @@ function parseApiError(data, fallback = 'Request failed.') {
   if (!d) return fallback
   if (typeof d === 'string') return d
   if (Array.isArray(d) && d.length > 0) {
-    // Pydantic validation error — combine all messages
     return d.map(e => e.msg || String(e)).join('; ')
   }
   return String(d) || fallback
@@ -51,7 +50,7 @@ export function AuthProvider({ children }) {
     try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null') }
     catch { return null }
   })
-  const [loading,   setLoading]   = useState(false)
+  const [loading,     setLoading]     = useState(false)
   // authChecked: true once the initial /auth/me verification is done.
   // Prevents a flash of the login page on page reload.
   const [authChecked, setAuthChecked] = useState(false)
@@ -96,7 +95,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/auth/login`, {
+      const res  = await fetch(`${API}/auth/login`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ email, password }),
@@ -116,7 +115,7 @@ export function AuthProvider({ children }) {
   const register = useCallback(async (fields) => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/auth/register`, {
+      const res  = await fetch(`${API}/auth/register`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(fields),

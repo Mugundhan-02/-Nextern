@@ -51,10 +51,10 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
 
   // ── Derived validation state ──────────────────────────────────────────
-  const emailError   = touched.email    ? validateEmail(form.email)       : null
-  const passwordError= touched.password ? validatePassword(form.password)  : null
-  const confirmError = touched.confirm  && form.confirm && form.password !== form.confirm
-                         ? 'Passwords do not match.' : null
+  const emailError    = touched.email    ? validateEmail(form.email)       : null
+  const passwordError = touched.password ? validatePassword(form.password)  : null
+  const confirmError  = touched.confirm  && form.confirm && form.password !== form.confirm
+                          ? 'Passwords do not match.' : null
 
   const pwScore     = passwordStrengthScore(form.password)
   const isDuplicate = error.toLowerCase().includes('already registered')
@@ -75,11 +75,11 @@ export default function Signup() {
     setTouched({ full_name: true, email: true, password: true, confirm: true })
 
     // ── Client-side guard ─────────────────────────────────────────────
-    if (!form.full_name.trim())       return setError('Full name is required.')
-    if (!isValidEmail(form.email))    return setError('Please enter a valid email address.')
+    if (!form.full_name.trim())          return setError('Full name is required.')
+    if (!isValidEmail(form.email))       return setError('Please enter a valid email address.')
     if (validatePassword(form.password)) return setError(validatePassword(form.password))
     if (form.password !== form.confirm)  return setError('Passwords do not match.')
-    if (!form.degree_program)          return setError('Please select your degree program.')
+    if (!form.degree_program)            return setError('Please select your degree program.')
 
     // ── Network call ──────────────────────────────────────────────────
     setLoading(true)

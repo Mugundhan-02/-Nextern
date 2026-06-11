@@ -27,3 +27,6 @@ sqlalchemy==2.0.36        # ORM for SQLite (dev) and PostgreSQL (prod)
 python-jose[cryptography] # JWT creation and verification (HS256)
 passlib[bcrypt]           # bcrypt password hashing — industry standard
 bcrypt==4.2.1             # passlib is not yet compatible with bcrypt 5.x
+
+# ── External API integration (Phase 7) ────────────────────────────
+httpx                     # Async HTTP client for calling the Arbeitnow Jobs API

@@ -13,6 +13,7 @@ import {
   SPECIALIZATIONS,
   parseLegacyDegree,
 } from '../data/degreeData'
+import { formatFullDatetime, formatShortDate } from '../utils/formatDate'
 
 const API = 'http://127.0.0.1:8000/api/v1'
 
@@ -189,7 +190,7 @@ export default function UserProfile() {
               <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
                 <Calendar className="w-3 h-3" />
                 Member since {profile?.created_at
-                  ? new Date(profile.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+                  ? formatShortDate(profile.created_at)
                   : '—'}
               </p>
             </div>
@@ -307,7 +308,7 @@ export default function UserProfile() {
                     style={{ width: `${p.prediction_score}%`, transition: 'width 1s ease' }} />
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">{p.recommendation}</p>
-                <p className="text-xs text-slate-600">{new Date(p.created_at).toLocaleString('en-IN')}</p>
+                <p className="text-xs text-slate-600">{formatFullDatetime(p.created_at)}</p>
               </div>
             )
           })() : (
@@ -348,7 +349,7 @@ export default function UserProfile() {
                     <span className="text-xs text-slate-500">+{r.extracted_skills.length - 6} more</span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600">{new Date(r.created_at).toLocaleString('en-IN')}</p>
+                <p className="text-xs text-slate-600">{formatFullDatetime(r.created_at)}</p>
               </div>
             )
           })() : (

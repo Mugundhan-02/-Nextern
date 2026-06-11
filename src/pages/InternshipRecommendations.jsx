@@ -1,291 +1,903 @@
-import React, { useState } from 'react'
-import {
-  MapPin, Clock, IndianRupee, Bookmark, BookmarkCheck,
-  ExternalLink, Search, Sparkles, SlidersHorizontal, GraduationCap
-} from 'lucide-react'
-import { internships, degreePrograms } from '../data/dummyData'
-import clsx from 'clsx'
+// src/pages/InternshipRecommendations.jsx
+// =============================================================
+// Phase 7 – Multi-source Real Job Listings
+// =============================================================
 
-const ALL_DOMAINS = [
-  'All', 'Software', 'Cloud', 'Data Science', 'Machine Learning',
-  'Fintech', 'Finance', 'Banking', 'Consulting', 'Operations',
-  'Marketing', 'Core Engineering', 'Data Engineering',
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  MapPin, ExternalLink, Search, Briefcase, RefreshCw,
+  WifiOff, Globe, Tag, ChevronLeft, ChevronRight,
+  GraduationCap, X, IndianRupee, Zap, CheckCircle2,
+  Filter, AlertCircle, SlidersHorizontal, Sparkles,
+} from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+
+// ── Constants ──────────────────────────────────────────────
+const API_BASE  = 'http://127.0.0.1:8000/api/v1'
+const PAGE_SIZE = 20
+
+const DEGREE_OPTIONS = [
+  { label: 'All',   value: 'all' },
+  { label: 'BCA',   value: 'BCA' },
+  { label: 'BSc',   value: 'BSc' },
+  { label: 'BTech', value: 'BTech' },
+  { label: 'BCom',  value: 'BCom' },
+  { label: 'BBA',   value: 'BBA' },
+  { label: 'MCA',   value: 'MCA' },
+  { label: 'MSc',   value: 'MSc' },
+  { label: 'MBA',   value: 'MBA' },
 ]
 
-const ALL_LOCATIONS = ['All', 'Bangalore', 'Hyderabad', 'Mumbai', 'Pune', 'Chennai', 'Delhi']
+const JOB_TYPES = [
+  { label: 'All Types',     value: 'all' },
+  { label: 'Full-Time',     value: 'full_time' },
+  { label: 'Part-Time',     value: 'part_time' },
+  { label: 'Internship',    value: 'internship' },
+  { label: 'Remote',        value: 'remote' },
+  { label: 'Contract',      value: 'contract' },
+]
 
-const SORT_OPTIONS = ['Best Match', 'Highest Stipend', 'Newest', 'Deadline Soon']
+const LOCATION_PRESETS = [
+  { label: '🇮🇳 All India', value: 'India' },
+  { label: '🌐 Remote',     value: 'remote' },
+  { label: '🏙 Bangalore',  value: 'Bangalore' },
+  { label: '🌊 Chennai',    value: 'Chennai' },
+  { label: '🌇 Hyderabad',  value: 'Hyderabad' },
+  { label: '🏢 Mumbai',     value: 'Mumbai' },
+  { label: '🏙 Pune',       value: 'Pune' },
+  { label: '🏛 Delhi/NCR',  value: 'Delhi' },
+  { label: 'Noida',         value: 'Noida' },
+]
 
-const AI_TIPS = {
-  'BE/BTech': 'Based on your profile, Google SWE Intern and Razorpay Backend Intern are your top tech matches.',
-  'BCA':      'Zoho Full Stack and Swiggy Frontend Intern align well with your web development skills.',
-  'BSc CS':   'Freshworks SWE and TCS Digital are strong matches — build 2 more projects to boost eligibility.',
-  'BSc DS':   'Fractal AI Data Science and Zepto ML Intern are excellent fits for your analytics profile.',
-  'BCom':     'KPMG Tax Intern and HDFC Bank Finance Intern are top picks for your commerce background.',
-  'BBA':      'HUL Marketing Intern and Amazon Ops Management align perfectly with your management skills.',
-  'MCA':      'Microsoft Azure and Amazon SDE roles are strong matches — sharpen DSA for FAANG readiness.',
-  'MBA':      'BCG Business Analyst and Deloitte Senior Analyst are top matches for MBA graduates.',
+const KEYWORD_PRESETS = [
+  'Python Developer', 'Data Analyst', 'AI Engineer',
+  'Software Engineer', 'Full Stack', 'React Developer',
+  'Machine Learning', 'DevOps', 'Data Science',
+  'TCS', 'Infosys', 'Zoho', 'Freshworks',
+]
+
+const PALETTE = ['#6366f1','#8b5cf6','#0ea5e9','#14b8a6','#f59e0b','#ef4444','#ec4899','#10b981']
+
+// ── Pure helper functions ───────────────────────────────────
+function pickColor(name) {
+  const n = (name || 'A').toUpperCase()
+  return PALETTE[n.charCodeAt(0) % PALETTE.length]
 }
 
-function MatchBadge({ pct }) {
-  const gradient =
-    pct >= 85 ? 'from-emerald-500 to-teal-500' :
-    pct >= 70 ? 'from-indigo-500 to-purple-500' :
-    'from-amber-500 to-orange-500'
+function initials(name) {
+  if (!name) return '?'
+  return name.split(' ').slice(0, 2).map(w => (w[0] || '').toUpperCase()).join('') || '?'
+}
+
+// Pill component used throughout
+function Pill({ children, style, onClick }) {
+  const base = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '2px 8px',
+    borderRadius: 8,
+    fontSize: 11,
+    fontWeight: 600,
+    border: '1px solid transparent',
+    cursor: onClick ? 'pointer' : 'default',
+    ...style,
+  }
+  return onClick
+    ? <button onClick={onClick} style={base}>{children}</button>
+    : <span style={base}>{children}</span>
+}
+
+// ── JobCard ─────────────────────────────────────────────────
+function JobCard({ job }) {
+  const color = pickColor(job.company_name)
+
+  function handleApply(e) {
+    e.preventDefault()
+    const url = job.apply_url
+    if (url && url !== '#') {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   return (
-    <div className={`px-2.5 py-1 rounded-lg bg-gradient-to-r ${gradient} text-white text-xs font-bold shadow-sm`}>
-      {pct}% match
+    <div style={{
+      background: 'rgba(255,255,255,0.04)',
+      border: '1px solid rgba(255,255,255,0.09)',
+      borderRadius: 16,
+      padding: '18px 18px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12,
+      minHeight: 220,
+      transition: 'border-color 0.2s, background 0.2s',
+    }}>
+
+      {/* Header: logo + title */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+          background: color + '22', border: '1px solid ' + color + '44',
+          color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700,
+        }}>
+          {initials(job.company_name)}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{
+            color: '#f1f5f9', fontWeight: 700, fontSize: 14,
+            lineHeight: '1.35', overflow: 'hidden',
+            display: '-webkit-box', WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}>
+            {job.job_title || 'Untitled Position'}
+          </p>
+          <p style={{ color: '#94a3b8', fontSize: 12, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {job.company_name || 'Unknown Company'}
+          </p>
+        </div>
+      </div>
+
+      {/* Location + type */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', color: '#64748b', fontSize: 12 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <MapPin size={13} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
+            {job.location || 'Not specified'}
+          </span>
+        </span>
+        {job.job_type && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Briefcase size={13} />
+            {job.job_type}
+          </span>
+        )}
+      </div>
+
+      {/* Salary */}
+      {job.salary && (
+        <p style={{ color: '#34d399', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <IndianRupee size={12} />
+          {job.salary}
+        </p>
+      )}
+
+      {/* Badges */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <CountryBadge code={job.source_country} />
+        <SourceBadge  source={job.source} />
+        {Array.isArray(job.tags) && job.tags.slice(0, 2).map(t => (
+          <Pill key={t} style={{ background: 'rgba(99,102,241,0.1)', borderColor: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
+            <Tag size={10} />
+            {t}
+          </Pill>
+        ))}
+      </div>
+
+      {/* Apply button */}
+      <button
+        onClick={handleApply}
+        style={{
+          marginTop: 'auto',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          padding: '10px 16px', borderRadius: 12,
+          background: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+          color: '#fff', fontSize: 13, fontWeight: 700,
+          border: 'none', cursor: 'pointer', width: '100%',
+        }}
+      >
+        <ExternalLink size={13} />
+        Apply Now
+      </button>
     </div>
   )
 }
 
-export default function InternshipRecommendations() {
-  const [savedIds,  setSavedIds]  = useState(internships.filter((i) => i.isSaved).map((i) => i.id))
-  const [applied,   setApplied]   = useState([])
-  const [domain,    setDomain]    = useState('All')
-  const [location,  setLocation]  = useState('All')
-  const [sort,      setSort]      = useState('Best Match')
-  const [search,    setSearch]    = useState('')
-  const [degFilter, setDegFilter] = useState('All')
+function CountryBadge({ code }) {
+  const map = {
+    IN:     { label: '🇮🇳 India',        bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.28)',  color: '#34d399' },
+    REMOTE: { label: '🌐 Remote',        bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.28)',  color: '#93c5fd' },
+    INTL:   { label: '🌍 International', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.28)', color: '#94a3b8' },
+  }
+  const m = map[code] || map.INTL
+  return <Pill style={{ background: m.bg, borderColor: m.border, color: m.color }}>{m.label}</Pill>
+}
 
-  const toggleSave  = (id) => setSavedIds((p) => p.includes(id) ? p.filter((i) => i !== id) : [...p, id])
-  const toggleApply = (id) => setApplied((p)  => p.includes(id) ? p.filter((i) => i !== id) : [...p, id])
+function SourceBadge({ source }) {
+  const map = {
+    Adzuna:    { label: '🇮🇳 Adzuna',    bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.25)', color: '#34d399' },
+    Remotive:  { label: '🌐 Remotive',   bg: 'rgba(59,130,246,0.1)',  border: 'rgba(59,130,246,0.25)', color: '#93c5fd' },
+    Arbeitnow: { label: '🇪🇺 Arbeitnow', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.25)', color: '#c4b5fd' },
+  }
+  const m = map[source] || map.Arbeitnow
+  return <Pill style={{ background: m.bg, borderColor: m.border, color: m.color }}>{m.label}</Pill>
+}
 
-  const filtered = internships
-    .filter((i) => domain    === 'All' || i.domain    === domain)
-    .filter((i) => location  === 'All' || i.location  === location)
-    .filter((i) => degFilter === 'All' || (i.forDegrees && i.forDegrees.includes(degFilter)))
-    .filter((i) =>
-      !search ||
-      i.company.toLowerCase().includes(search.toLowerCase()) ||
-      i.role.toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sort === 'Best Match')    return b.matchPct - a.matchPct
-      if (sort === 'Deadline Soon') return a.deadline.localeCompare(b.deadline)
-      if (sort === 'Newest')        return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0)
-      return 0
-    })
-
-  const aiTip = AI_TIPS[degFilter] || 'Select your degree program above to get personalised internship recommendations.'
-
+function SkeletonCard() {
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Listings', value: internships.length,  color: 'text-indigo-400' },
-          { label: 'Saved',          value: savedIds.length,      color: 'text-purple-400' },
-          { label: 'Applied',        value: applied.length,       color: 'text-emerald-400' },
-          { label: 'Shown',          value: filtered.length,      color: 'text-amber-400' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="glass-card p-4 flex flex-col gap-1">
-            <p className="text-xs text-slate-400">{label}</p>
-            <p className={clsx('text-2xl font-bold', color)}>{value}</p>
-          </div>
+    <div style={{
+      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12,
+      minHeight: 220, animation: 'pulse 1.5s ease-in-out infinite',
+    }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.06)', width: '75%' }} />
+          <div style={{ height: 11, borderRadius: 6, background: 'rgba(255,255,255,0.04)', width: '50%' }} />
+        </div>
+      </div>
+      <div style={{ height: 11, borderRadius: 6, background: 'rgba(255,255,255,0.04)', width: '60%' }} />
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[60, 78, 52].map(w => (
+          <div key={w} style={{ height: 20, borderRadius: 8, background: 'rgba(255,255,255,0.04)', width: w }} />
         ))}
       </div>
+      <div style={{ height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.04)', marginTop: 'auto' }} />
+    </div>
+  )
+}
 
-      {/* Degree Filter */}
-      <div className="glass-card p-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 flex-shrink-0">
-            <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-            My Degree:
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setDegFilter('All')}
-              className={clsx(
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-150',
-                degFilter === 'All'
-                  ? 'bg-indigo-600/40 border-indigo-500/60 text-white'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200'
-              )}
-            >
-              All Programs
-            </button>
-            {degreePrograms.map((d) => (
-              <button
-                key={d.value}
-                onClick={() => setDegFilter(d.value)}
-                className={clsx(
-                  'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-150',
-                  degFilter === d.value
-                    ? 'bg-indigo-600/40 border-indigo-500/60 text-white'
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200'
-                )}
+// ── Main page component ─────────────────────────────────────
+export default function InternshipRecommendations() {
+  const { user } = useAuth()
+
+  // State
+  const [jobs,         setJobs]         = useState([])
+  const [total,        setTotal]        = useState(0)
+  const [page,         setPage]         = useState(1)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState('')
+  const [sourcesUsed,  setSourcesUsed]  = useState([])
+  const [sourceStatus, setSourceStatus] = useState([])
+  const [suggestions,  setSuggestions]  = useState([])
+  const [showFilters,  setShowFilters]  = useState(false)
+
+  // Committed search filters
+  const [keyword,    setKeyword]    = useState('')
+  const [location,   setLocation]   = useState('')
+  const [degree,     setDegree]     = useState('all')
+  const [jobType,    setJobType]    = useState('all')
+  const [remoteOnly, setRemoteOnly] = useState(false)
+
+  // Pending (not yet committed) input values
+  const [inputKw,  setInputKw]  = useState('')
+  const [inputLoc, setInputLoc] = useState('')
+
+  const abortRef     = useRef(null)
+  // Track if degree was pre-filled from profile so we only do it once
+  const degreeSetRef = useRef(false)
+
+  // ── Pre-fill degree ONCE from user profile ─────────────────
+  // NOTE: This is not in a useEffect that depends on `degree`
+  // to avoid triggering an extra fetch cycle.
+  useEffect(() => {
+    if (degreeSetRef.current) return
+    if (!user?.degree_program) return
+    const matched = DEGREE_OPTIONS.find(o =>
+      o.value !== 'all' &&
+      user.degree_program.toLowerCase().startsWith(o.value.toLowerCase())
+    )
+    if (matched && matched.value !== 'all') {
+      degreeSetRef.current = true
+      setDegree(matched.value)
+    }
+  }, [user])
+
+  // ── Fetch jobs ─────────────────────────────────────────────
+  // NOTE: fetchJobs does NOT depend on authHeaders (removed from deps).
+  // We read authHeaders inside the function via a ref to avoid
+  // re-creating fetchJobs every time the token changes, which would
+  // cause an infinite useEffect loop.
+  const authHeadersRef = useRef(null)
+  const { authHeaders } = useAuth()
+  authHeadersRef.current = authHeaders   // always up-to-date, no dep needed
+
+  const fetchJobs = useCallback(async (kw, loc, deg, jt, ro, pg) => {
+    if (abortRef.current) {
+      try { abortRef.current.abort() } catch (_) {}
+    }
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+
+    setLoading(true)
+    setError('')
+
+    const params = new URLSearchParams({
+      keyword:     kw  || '',
+      location:    loc || 'all',
+      degree:      deg || 'all',
+      job_type:    jt  || 'all',
+      remote_only: String(ro),
+      page:        String(pg),
+      page_size:   String(PAGE_SIZE),
+    })
+
+    const url = `${API_BASE}/jobs?${params}`
+    console.log('[Jobs] Fetching:', url)
+
+    try {
+      const headers = authHeadersRef.current ? authHeadersRef.current() : {}
+      const res = await fetch(url, { headers, signal: ctrl.signal })
+
+      let data
+      try { data = await res.json() } catch (_) { data = null }
+
+      if (!res.ok) {
+        throw new Error(data?.detail || `HTTP ${res.status}`)
+      }
+      if (!data) throw new Error('Empty response from server')
+
+      const jobList = Array.isArray(data.jobs) ? data.jobs : []
+
+      console.log('[Jobs] Success:', {
+        total: data.total,
+        jobs_received: jobList.length,
+        sources: data.sources_used,
+        first: jobList[0] ? { title: jobList[0].job_title, company: jobList[0].company_name, source_country: jobList[0].source_country } : null,
+      })
+
+      setJobs(jobList)
+      setTotal(data.total        || 0)
+      setSourcesUsed(data.sources_used  || [])
+      setSourceStatus(data.source_status || [])
+      setSuggestions(data.suggestions   || [])
+
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        console.log('[Jobs] Request aborted (intentional)')
+        return
+      }
+      console.error('[Jobs] Fetch error:', e)
+      const isNet = e.message.includes('Failed to fetch') || e.message.includes('NetworkError')
+      setError(isNet
+        ? 'Cannot connect to backend (http://127.0.0.1:8000). Make sure the Python server is running.'
+        : e.message
+      )
+      setJobs([])
+      setTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  // fetchJobs has NO external deps — it reads authHeaders via ref
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Trigger fetch on filter / page change
+  useEffect(() => {
+    fetchJobs(keyword, location, degree, jobType, remoteOnly, page)
+  }, [fetchJobs, keyword, location, degree, jobType, remoteOnly, page])
+
+  // Helpers
+  const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const hasFilters  = !!(keyword || location || degree !== 'all' || jobType !== 'all' || remoteOnly)
+
+  const commitSearch = () => {
+    setKeyword(inputKw.trim())
+    setLocation(inputLoc.trim())
+    setPage(1)
+  }
+  const onKey      = e => { if (e.key === 'Enter') commitSearch() }
+  const clearAll   = () => {
+    setKeyword(''); setLocation(''); setDegree('all')
+    setJobType('all'); setRemoteOnly(false); setPage(1)
+    setInputKw(''); setInputLoc('')
+  }
+  const applyLoc   = v => { setLocation(v); setInputLoc(v); setRemoteOnly(v === 'remote'); setPage(1) }
+  const applyKw    = v => { setKeyword(v); setInputKw(v); setPage(1) }
+  const onSuggest  = v => { setKeyword(v); setInputKw(v); setPage(1) }
+
+  // Group jobs into sections by source_country
+  const sections = (() => {
+    if (!jobs.length) return []
+    const groups = { IN: [], REMOTE: [], INTL: [], OTHER: [] }
+    jobs.forEach(j => {
+      if      (j.source_country === 'IN')     groups.IN.push(j)
+      else if (j.source_country === 'REMOTE') groups.REMOTE.push(j)
+      else if (j.source_country === 'INTL')   groups.INTL.push(j)
+      else                                     groups.OTHER.push(j)
+    })
+    return [
+      groups.IN.length     ? { key: 'IN',     label: '🇮🇳 India Jobs',         items: groups.IN     } : null,
+      groups.REMOTE.length ? { key: 'REMOTE', label: '🌐 Remote Opportunities', items: groups.REMOTE } : null,
+      groups.INTL.length   ? { key: 'INTL',   label: '🌍 International Jobs',   items: groups.INTL   } : null,
+      groups.OTHER.length  ? { key: 'OTHER',  label: '📋 Other Listings',       items: groups.OTHER  } : null,
+    ].filter(Boolean)
+  })()
+
+  // Inline styles for common elements
+  const S = {
+    card: {
+      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+      borderRadius: 20, padding: 20,
+    },
+    btn: (active, activeStyle, inactiveStyle) => ({
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '8px 16px', borderRadius: 12, fontSize: 13,
+      fontWeight: 600, border: '1px solid', cursor: 'pointer',
+      transition: 'all 0.15s',
+      ...(active ? activeStyle : inactiveStyle),
+    }),
+    pillBtn: (active) => ({
+      padding: '4px 10px', borderRadius: 8, fontSize: 12,
+      fontWeight: 600, border: '1px solid', cursor: 'pointer',
+      background: active ? 'rgba(99,102,241,0.3)'  : 'rgba(255,255,255,0.04)',
+      borderColor: active ? 'rgba(99,102,241,0.55)' : 'rgba(255,255,255,0.08)',
+      color:       active ? '#e0e7ff'               : '#64748b',
+    }),
+    input: {
+      width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+      color: '#f1f5f9', borderRadius: 12, padding: '10px 14px 10px 36px',
+      fontSize: 13, outline: 'none',
+    },
+    divider: { flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' },
+    sectionLabel: {
+      display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12,
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: 16,
+    },
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────
+  return (
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── DEBUG PANEL (always visible) ───────────────── */}
+      <div style={{
+        background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+        borderRadius: 12, padding: '10px 16px', fontSize: 12, color: '#94a3b8',
+        display: 'flex', flexWrap: 'wrap', gap: '6px 20px',
+      }}>
+        <span style={{ color: '#818cf8', fontWeight: 700 }}>DEBUG</span>
+        <span>loading: <b style={{ color: loading ? '#f87171' : '#34d399' }}>{String(loading)}</b></span>
+        <span>error: <b style={{ color: error ? '#f87171' : '#34d399' }}>{error ? 'YES' : 'none'}</b></span>
+        <span>jobs.length: <b style={{ color: '#fbbf24' }}>{jobs.length}</b></span>
+        <span>total: <b style={{ color: '#fbbf24' }}>{total}</b></span>
+        <span>page: <b style={{ color: '#fbbf24' }}>{page}/{totalPages}</b></span>
+        <span>sections: <b style={{ color: '#a78bfa' }}>{sections.length}</b></span>
+        {jobs.length > 0 && (
+          <span>
+            first job:{' '}
+            <b style={{ color: '#f1f5f9' }}>
+              &quot;{jobs[0].job_title}&quot; @ {jobs[0].company_name} [{jobs[0].source_country}]
+            </b>
+          </span>
+        )}
+      </div>
+
+      {/* ── Header ─────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Briefcase size={22} color="#818cf8" />
+            Job & Internship Board
+          </h2>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
+            Live listings · Adzuna India · Remotive · Arbeitnow
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowFilters(f => !f)}
+            style={S.btn(showFilters,
+              { background: 'rgba(99,102,241,0.25)', borderColor: 'rgba(99,102,241,0.45)', color: '#c7d2fe' },
+              { background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#94a3b8' }
+            )}
+          >
+            <Filter size={14} />
+            Filters
+            {hasFilters && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#818cf8', display: 'inline-block' }} />}
+          </button>
+          <button
+            onClick={() => fetchJobs(keyword, location, degree, jobType, remoteOnly, page)}
+            disabled={loading}
+            style={S.btn(false,
+              { background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#94a3b8' },
+              { background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#94a3b8' }
+            )}
+          >
+            <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* ── Stats bar ──────────────────────────────────── */}
+      <div style={{ ...S.card, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 28 }}>
+          {[
+            { label: 'Total Results', value: total,                   color: '#818cf8' },
+            { label: 'Showing',       value: jobs.length,             color: '#a78bfa' },
+            { label: 'Page',          value: `${page} / ${totalPages}`, color: '#fbbf24' },
+          ].map(({ label, value, color }) => (
+            <div key={label}>
+              <p style={{ fontSize: 11, color: '#64748b' }}>{label}</p>
+              <p style={{ fontSize: 22, fontWeight: 700, color }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Source status */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: '#475569' }}>Sources:</span>
+          {['Adzuna', 'Remotive', 'Arbeitnow'].map(src => {
+            const active = sourcesUsed.includes(src)
+            const ss = sourceStatus.find(s => s.name === src)
+            const err = ss && !ss.ok
+            const colors = {
+              Adzuna:    ['rgba(16,185,129,0.12)', 'rgba(16,185,129,0.3)',  '#34d399'],
+              Remotive:  ['rgba(59,130,246,0.12)',  'rgba(59,130,246,0.3)',  '#93c5fd'],
+              Arbeitnow: ['rgba(168,85,247,0.12)', 'rgba(168,85,247,0.3)', '#c4b5fd'],
+            }[src]
+            return (
+              <span
+                key={src}
+                title={err ? ss.error : ss ? `${ss.count} jobs` : 'Not active'}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                  border: '1px solid',
+                  background: active ? colors[0] : err ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)',
+                  borderColor: active ? colors[1] : err ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.07)',
+                  color:       active ? colors[2] : err ? '#f87171' : '#334155',
+                }}
               >
-                {d.value}
+                {active ? <CheckCircle2 size={11} /> : err ? <AlertCircle size={11} /> : null}
+                {src}
+                {active && ss?.count > 0 && <span style={{ opacity: 0.6 }}>({ss.count})</span>}
+                {loading && active && <span style={{ width: 9, height: 9, borderRadius: '50%', border: '1.5px solid currentColor', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
+              </span>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Search bar ─────────────────────────────────── */}
+      <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {/* Keyword input */}
+          <div style={{ position: 'relative', flex: '1 1 200px' }}>
+            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
+            <input
+              type="text"
+              placeholder="Company, role, or skill (e.g. Zoho, Python Developer)"
+              value={inputKw}
+              onChange={e => setInputKw(e.target.value)}
+              onKeyDown={onKey}
+              style={S.input}
+            />
+          </div>
+          {/* Location input */}
+          <div style={{ position: 'relative', flex: '0 1 200px' }}>
+            <MapPin size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
+            <input
+              type="text"
+              placeholder="City, country (e.g. Chennai)"
+              value={inputLoc}
+              onChange={e => setInputLoc(e.target.value)}
+              onKeyDown={onKey}
+              style={S.input}
+            />
+          </div>
+          <button
+            onClick={commitSearch}
+            disabled={loading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px',
+              borderRadius: 12, background: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+              color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
+            }}
+          >
+            <Search size={14} />
+            Search
+          </button>
+          {hasFilters && (
+            <button
+              onClick={clearAll}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 16px', borderRadius: 12, fontSize: 13, color: '#94a3b8', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+            >
+              <X size={13} />
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Keyword presets */}
+        <div>
+          <p style={{ fontSize: 11, color: '#334155', marginBottom: 6 }}>Quick Search:</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {KEYWORD_PRESETS.map(p => (
+              <button key={p} onClick={() => applyKw(p)} style={S.pillBtn(keyword === p)}>{p}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Location presets */}
+        <div>
+          <p style={{ fontSize: 11, color: '#334155', marginBottom: 6 }}>Location:</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {LOCATION_PRESETS.map(({ label, value }) => (
+              <button key={value} onClick={() => applyLoc(value)}
+                style={{
+                  ...S.pillBtn(location === value),
+                  background: location === value ? 'rgba(16,185,129,0.2)'   : 'rgba(255,255,255,0.04)',
+                  borderColor: location === value ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.08)',
+                  color:       location === value ? '#6ee7b7'               : '#64748b',
+                }}>
+                {label}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Search + Domain/Location Filters */}
-      <div className="glass-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex items-center flex-1 min-w-[200px]">
-            <Search className="absolute left-3 w-3.5 h-3.5 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search company or role..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-8"
-            />
-          </div>
-
-          <select value={domain}   onChange={(e) => setDomain(e.target.value)}   className="select-field min-w-[130px]">
-            {ALL_DOMAINS.map((d) => <option key={d} value={d} className="bg-[#141c35]">{d}</option>)}
-          </select>
-
-          <select value={location} onChange={(e) => setLocation(e.target.value)} className="select-field min-w-[130px]">
-            {ALL_LOCATIONS.map((l) => <option key={l} value={l} className="bg-[#141c35]">{l}</option>)}
-          </select>
-
-          <select value={sort}     onChange={(e) => setSort(e.target.value)}     className="select-field min-w-[140px]">
-            {SORT_OPTIONS.map((s) => <option key={s} value={s} className="bg-[#141c35]">{s}</option>)}
-          </select>
-
-          <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400">
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            {filtered.length} results
+      {/* ── Advanced filters ────────────────────────────── */}
+      {showFilters && (
+        <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <SlidersHorizontal size={14} color="#818cf8" />
+            Advanced Filters
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+            {/* Degree */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <GraduationCap size={12} color="#818cf8" /> DEGREE
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {DEGREE_OPTIONS.map(o => (
+                  <button key={o.value} onClick={() => { setDegree(o.value); setPage(1) }} style={S.pillBtn(degree === o.value)}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Job type */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Briefcase size={12} color="#a78bfa" /> JOB TYPE
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {JOB_TYPES.map(o => (
+                  <button key={o.value} onClick={() => { setJobType(o.value); setPage(1) }}
+                    style={{ ...S.pillBtn(jobType === o.value),
+                      background: jobType === o.value ? 'rgba(168,85,247,0.3)'  : 'rgba(255,255,255,0.04)',
+                      borderColor: jobType === o.value ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.08)',
+                      color:       jobType === o.value ? '#e9d5ff'              : '#64748b',
+                    }}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Remote */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Globe size={12} color="#38bdf8" /> WORK MODE
+              </p>
+              <button onClick={() => { setRemoteOnly(r => !r); setPage(1) }}
+                style={S.btn(remoteOnly,
+                  { background: 'rgba(59,130,246,0.2)', borderColor: 'rgba(59,130,246,0.4)', color: '#bfdbfe' },
+                  { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)', color: '#64748b' }
+                )}>
+                <Globe size={14} />
+                {remoteOnly ? '✓ Remote Only' : 'Remote Only'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* AI Tip */}
-      <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600/20 to-indigo-600/15 border border-purple-500/25">
-        <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
-        <p className="text-sm text-slate-300">
-          <span className="text-purple-300 font-semibold">AI Tip: </span>
-          {aiTip}
+      {/* ── Smart match tip ─────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderRadius: 20,
+        background: 'linear-gradient(to right, rgba(147,51,234,0.12), rgba(99,102,241,0.08))',
+        border: '1px solid rgba(147,51,234,0.2)',
+      }}>
+        <Sparkles size={15} color="#a78bfa" style={{ flexShrink: 0 }} />
+        <p style={{ fontSize: 13, color: '#cbd5e1' }}>
+          <span style={{ color: '#c4b5fd', fontWeight: 700 }}>Smart Match: </span>
+          {user?.degree_program
+            ? `Showing jobs for ${user.degree_program}${user.specialization ? ` — ${user.specialization}` : ''}. India jobs shown first.`
+            : 'Log in to get personalised job recommendations based on your degree.'}
         </p>
       </div>
 
-      {/* Cards Grid */}
-      {filtered.length === 0 ? (
-        <div className="glass-card p-12 flex flex-col items-center gap-3 text-center">
-          <Search className="w-10 h-10 text-slate-600" />
-          <p className="text-slate-400 font-medium">No internships match your current filters</p>
+      {/* ── Loading ─────────────────────────────────────── */}
+      {loading && (
+        <div style={S.grid}>
+          {Array.from({ length: 6 }, (_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+
+      {/* ── Error state ─────────────────────────────────── */}
+      {!loading && error && (
+        <div style={{ ...S.card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: 40, textAlign: 'center' }}>
+          <WifiOff size={44} color="rgba(248,113,113,0.55)" />
+          <div style={{ maxWidth: 420 }}>
+            <p style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 18 }}>Could not load jobs</p>
+            <p style={{ color: '#64748b', fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>{error}</p>
+          </div>
           <button
-            onClick={() => { setDomain('All'); setLocation('All'); setSearch(''); setDegFilter('All') }}
-            className="btn-secondary"
+            onClick={() => fetchJobs(keyword, location, degree, jobType, remoteOnly, page)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px',
+              borderRadius: 12, background: 'linear-gradient(to right,#4f46e5,#7c3aed)',
+              color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
+            }}
           >
-            Clear All Filters
+            <RefreshCw size={14} />
+            Try Again
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((intern) => {
-            const isSaved   = savedIds.includes(intern.id)
-            const isApplied = applied.includes(intern.id)
+      )}
 
-            return (
-              <div
-                key={intern.id}
-                className={clsx(
-                  'glass-card-hover p-5 flex flex-col gap-4 relative group',
-                  isApplied && 'border-emerald-500/30'
-                )}
-              >
-                {/* Badges */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                  {intern.isNew && !isApplied && <span className="badge badge-cyan">New</span>}
-                  {isApplied            && <span className="badge badge-green">Applied ✓</span>}
+      {/* ── Empty state ─────────────────────────────────── */}
+      {!loading && !error && jobs.length === 0 && (
+        <>
+          <div style={{ ...S.card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: 48, textAlign: 'center' }}>
+            <Briefcase size={44} style={{ color: '#1e293b' }} />
+            <div>
+              <p style={{ color: '#64748b', fontWeight: 600 }}>No jobs found</p>
+              <p style={{ color: '#475569', fontSize: 13, marginTop: 4 }}>
+                {location && location !== 'all'
+                  ? `No listings in "${location}" right now. Try Remote jobs.`
+                  : 'Try different keywords or clear the filters.'}
+              </p>
+            </div>
+            {/* India hint */}
+            {['india','chennai','bangalore','hyderabad','mumbai','pune','delhi','noida'].some(c => (location||'').toLowerCase().includes(c))
+              && sourceStatus.some(s => s.name === 'Adzuna' && !s.ok) && (
+              <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: '10px 16px', maxWidth: 360, textAlign: 'left', color: '#34d399', fontSize: 12 }}>
+                <p style={{ fontWeight: 700, marginBottom: 4 }}>🇮🇳 Get India jobs via Adzuna</p>
+                <p style={{ color: 'rgba(52,211,153,0.75)' }}>
+                  Register free at{' '}
+                  <a href="https://developer.adzuna.com/signup" target="_blank" rel="noopener noreferrer" style={{ color: '#6ee7b7', textDecoration: 'underline' }}>developer.adzuna.com</a>
+                  {' '}→ add keys to <code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: 4 }}>backend/.env</code>
+                </p>
+              </div>
+            )}
+            <button onClick={clearAll} style={{ padding: '9px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#f1f5f9', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Clear All Filters
+            </button>
+          </div>
+
+          {/* Suggestions */}
+          {suggestions.length > 0 && (
+            <div style={S.card}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Zap size={14} color="#fbbf24" /> Try These Searches
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {suggestions.map(s => (
+                  <button key={s} onClick={() => onSuggest(s)} style={{ padding: '6px 12px', borderRadius: 10, fontSize: 12, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: '#fcd34d', cursor: 'pointer' }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════
+          JOB CARDS — This section renders when jobs.length > 0
+          ═══════════════════════════════════════════════════ */}
+      {!loading && !error && jobs.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Thin-results suggestions */}
+          {suggestions.length > 0 && (
+            <div style={S.card}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Zap size={14} color="#fbbf24" /> Try These Searches
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {suggestions.map(s => (
+                  <button key={s} onClick={() => onSuggest(s)} style={{ padding: '6px 12px', borderRadius: 10, fontSize: 12, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: '#fcd34d', cursor: 'pointer' }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/*
+            CARD GRID
+            - If we have sections (grouped by country), render section by section
+            - If sections is empty (unexpected source_country values), render flat grid
+          */}
+          {sections.length > 0
+            ? sections.map(sec => (
+                <div key={sec.key}>
+                  {/* Section header */}
+                  <div style={S.sectionLabel}>
+                    <h3 style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', whiteSpace: 'nowrap' }}>{sec.label}</h3>
+                    <div style={S.divider} />
+                    <span style={{ fontSize: 11, color: '#475569', whiteSpace: 'nowrap' }}>{sec.items.length} listings</span>
+                  </div>
+                  {/* Cards */}
+                  <div style={S.grid}>
+                    {sec.items.map(job => <JobCard key={job.id} job={job} />)}
+                  </div>
                 </div>
-
-                {/* Header */}
-                <div className="flex items-start gap-3 pr-16">
-                  <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 border"
-                    style={{ backgroundColor: intern.color + '25', borderColor: intern.color + '45', color: intern.color }}
-                  >
-                    {intern.logo}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">{intern.role}</p>
-                    <p className="text-xs text-slate-400 font-medium">{intern.company}</p>
-                  </div>
+              ))
+            : (
+              /* Flat fallback — renders even if all source_country values are unexpected */
+              <div>
+                <div style={S.sectionLabel}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8' }}>📋 All Listings</h3>
+                  <div style={S.divider} />
+                  <span style={{ fontSize: 11, color: '#475569' }}>{jobs.length} listings</span>
                 </div>
-
-                {/* Match badge */}
-                <MatchBadge pct={intern.matchPct} />
-
-                {/* Meta grid */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <MapPin className="w-3.5 h-3.5 text-slate-500" /> {intern.location}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" /> {intern.duration}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                    <IndianRupee className="w-3 h-3" /> {intern.stipend}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <span className="text-slate-500">Due:</span>
-                    <span className="text-amber-400 font-medium">{intern.deadline.split(',')[0]}</span>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                <div className="flex flex-wrap gap-1.5">
-                  {intern.skills.map((skill) => (
-                    <span key={skill} className="text-xs px-2 py-0.5 rounded-lg bg-white/5 text-slate-400 border border-white/8">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Domain + Eligible degrees */}
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="badge badge-indigo">{intern.domain}</span>
-                  {intern.forDegrees?.slice(0, 3).map((d) => (
-                    <span key={d} className="badge badge-purple text-xs">{d}</span>
-                  ))}
-                  {intern.forDegrees?.length > 3 && (
-                    <span className="badge badge-purple">+{intern.forDegrees.length - 3}</span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 mt-auto pt-2 border-t border-white/8">
-                  <button
-                    onClick={() => toggleApply(intern.id)}
-                    className={clsx(
-                      'flex-1 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
-                      isApplied
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'btn-primary'
-                    )}
-                  >
-                    {isApplied ? '✓ Applied' : 'Apply Now'}
-                  </button>
-                  <button
-                    onClick={() => toggleSave(intern.id)}
-                    className={clsx(
-                      'w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 border',
-                      isSaved
-                        ? 'bg-purple-500/20 border-purple-500/40 text-purple-400'
-                        : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                    )}
-                    title={isSaved ? 'Unsave' : 'Save'}
-                  >
-                    {isSaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-                  </button>
-                  <button className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200">
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
+                <div style={S.grid}>
+                  {jobs.map(job => <JobCard key={job.id} job={job} />)}
                 </div>
               </div>
             )
-          })}
+          }
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 8 }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '8px 16px', borderRadius: 12, fontSize: 13,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  color: page === 1 ? '#334155' : '#94a3b8', cursor: page === 1 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft size={15} /> Previous
+              </button>
+
+              <div style={{ display: 'flex', gap: 5 }}>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+                  const pg = start + i
+                  return (
+                    <button key={pg} onClick={() => setPage(pg)}
+                      style={{
+                        width: 36, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700,
+                        border: '1px solid',
+                        background: pg === page ? 'rgba(99,102,241,0.4)'   : 'rgba(255,255,255,0.04)',
+                        borderColor: pg === page ? 'rgba(99,102,241,0.6)'  : 'rgba(255,255,255,0.08)',
+                        color:       pg === page ? '#fff'                   : '#64748b',
+                        cursor: 'pointer',
+                      }}>
+                      {pg}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '8px 16px', borderRadius: 12, fontSize: 13,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  color: page === totalPages ? '#334155' : '#94a3b8', cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Next <ChevronRight size={15} />
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {/* CSS for spin animation */}
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.5; }
+        }
+      `}</style>
+
     </div>
   )
 }

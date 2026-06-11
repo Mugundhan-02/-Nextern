@@ -28,10 +28,12 @@ logger = logging.getLogger("skillai.main")
 from config   import settings
 from schemas  import HealthResponse
 from database import init_db, SessionLocal
-from routes.predict  import router as predict_router
-from routes.resume   import router as resume_router
-from routes.history  import router as history_router
-from routes.auth     import router as auth_router
+from routes.predict    import router as predict_router
+from routes.resume     import router as resume_router
+from routes.history    import router as history_router
+from routes.auth       import router as auth_router
+from routes.jobs       import router as jobs_router
+from routes.analytics  import router as analytics_router
 import crud
 from auth_utils import hash_password
 
@@ -170,10 +172,12 @@ app.add_middleware(
 #
 API_PREFIX = f"/api/{settings.API_VERSION}"
 
-app.include_router(auth_router,    prefix=API_PREFIX)
-app.include_router(predict_router, prefix=API_PREFIX)
-app.include_router(resume_router,  prefix=API_PREFIX)
-app.include_router(history_router, prefix=API_PREFIX)
+app.include_router(auth_router,      prefix=API_PREFIX)
+app.include_router(predict_router,   prefix=API_PREFIX)
+app.include_router(resume_router,    prefix=API_PREFIX)
+app.include_router(history_router,   prefix=API_PREFIX)
+app.include_router(jobs_router,      prefix=API_PREFIX)
+app.include_router(analytics_router, prefix=API_PREFIX)
 
 
 # ── 4. Root & Health-Check Endpoints ─────────────────────────────
