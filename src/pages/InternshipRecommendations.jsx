@@ -38,22 +38,23 @@ const JOB_TYPES = [
 ]
 
 const LOCATION_PRESETS = [
-  { label: '🇮🇳 All India', value: 'India' },
-  { label: '🌐 Remote',     value: 'remote' },
-  { label: '🏙 Bangalore',  value: 'Bangalore' },
-  { label: '🌊 Chennai',    value: 'Chennai' },
-  { label: '🌇 Hyderabad',  value: 'Hyderabad' },
-  { label: '🏢 Mumbai',     value: 'Mumbai' },
-  { label: '🏙 Pune',       value: 'Pune' },
-  { label: '🏛 Delhi/NCR',  value: 'Delhi' },
-  { label: 'Noida',         value: 'Noida' },
+  { label: '🇮🇳 All India',    value: 'India'       },
+  { label: '🌊 Chennai',        value: 'Chennai'     },
+  { label: '🏙 Coimbatore',     value: 'Coimbatore'  },
+  { label: '🗺 Tamil Nadu',     value: 'Tamil Nadu'  },
+  { label: '🏙 Bangalore',      value: 'Bangalore'   },
+  { label: '🌇 Hyderabad',      value: 'Hyderabad'   },
+  { label: '🏢 Mumbai',         value: 'Mumbai'      },
+  { label: '🏙 Pune',           value: 'Pune'        },
+  { label: '🏛 Delhi/NCR',      value: 'Delhi'       },
+  { label: '🌐 Remote (India)', value: 'remote'      },
 ]
 
 const KEYWORD_PRESETS = [
-  'Python Developer', 'Data Analyst', 'AI Engineer',
-  'Software Engineer', 'Full Stack', 'React Developer',
-  'Machine Learning', 'DevOps', 'Data Science',
-  'TCS', 'Infosys', 'Zoho', 'Freshworks',
+  'Python Developer', 'Data Analyst', 'Machine Learning',
+  'Software Engineer', 'Full Stack Developer', 'React Developer',
+  'Java Developer', 'Data Science', 'DevOps Engineer',
+  'Zoho', 'Freshworks', 'TCS', 'Infosys', 'Startup',
 ]
 
 const PALETTE = ['#6366f1','#8b5cf6','#0ea5e9','#14b8a6','#f59e0b','#ef4444','#ec4899','#10b981']
@@ -164,7 +165,7 @@ function JobCard({ job }) {
 
       {/* Badges */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        <CountryBadge code={job.source_country} />
+        <CountryBadge code={job.source_country} location={job.location} />
         <SourceBadge  source={job.source} />
         {Array.isArray(job.tags) && job.tags.slice(0, 2).map(t => (
           <Pill key={t} style={{ background: 'rgba(99,102,241,0.1)', borderColor: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
@@ -193,21 +194,33 @@ function JobCard({ job }) {
   )
 }
 
-function CountryBadge({ code }) {
-  const map = {
-    IN:     { label: '🇮🇳 India',        bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.28)',  color: '#34d399' },
-    REMOTE: { label: '🌐 Remote',        bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.28)',  color: '#93c5fd' },
-    INTL:   { label: '🌍 International', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.28)', color: '#94a3b8' },
+function CountryBadge({ code, location }) {
+  // Derive a more specific label based on city when available
+  const loc = (location || '').toLowerCase()
+  let label = '🌍 International'
+  let bg = 'rgba(100,116,139,0.12)', border = 'rgba(100,116,139,0.28)', color = '#94a3b8'
+  if (code === 'IN') {
+    if (loc.includes('chennai') || loc.includes('madras'))          { label = '🌊 Chennai';    bg = 'rgba(16,185,129,0.18)'; border = 'rgba(16,185,129,0.4)';  color = '#6ee7b7' }
+    else if (loc.includes('coimbatore') || loc.includes('kovai'))   { label = '🏙 Coimbatore'; bg = 'rgba(16,185,129,0.15)'; border = 'rgba(16,185,129,0.35)'; color = '#6ee7b7' }
+    else if (loc.includes('tamil') || ['madurai','trichy','salem','vellore','tiruppur'].some(c => loc.includes(c))) { label = '🗺 Tamil Nadu'; bg = 'rgba(16,185,129,0.14)'; border = 'rgba(16,185,129,0.3)'; color = '#34d399' }
+    else if (loc.includes('bangalore') || loc.includes('bengaluru')){ label = '🏙 Bangalore';  bg = 'rgba(16,185,129,0.12)'; border = 'rgba(16,185,129,0.28)'; color = '#34d399' }
+    else if (loc.includes('hyderabad'))                              { label = '🌇 Hyderabad';  bg = 'rgba(16,185,129,0.12)'; border = 'rgba(16,185,129,0.28)'; color = '#34d399' }
+    else if (loc.includes('mumbai'))                                 { label = '🏢 Mumbai';     bg = 'rgba(16,185,129,0.12)'; border = 'rgba(16,185,129,0.28)'; color = '#34d399' }
+    else if (loc.includes('pune'))                                   { label = '🏙 Pune';       bg = 'rgba(16,185,129,0.12)'; border = 'rgba(16,185,129,0.28)'; color = '#34d399' }
+    else if (loc.includes('delhi') || loc.includes('ncr') || loc.includes('noida') || loc.includes('gurgaon')) { label = '🏛 Delhi NCR'; bg = 'rgba(16,185,129,0.12)'; border = 'rgba(16,185,129,0.28)'; color = '#34d399' }
+    else                                                             { label = '🇮🇳 India';     bg = 'rgba(16,185,129,0.12)'; border = 'rgba(16,185,129,0.28)'; color = '#34d399' }
+  } else if (code === 'REMOTE') {
+    label = '🌐 Remote'; bg = 'rgba(59,130,246,0.12)'; border = 'rgba(59,130,246,0.28)'; color = '#93c5fd'
   }
-  const m = map[code] || map.INTL
-  return <Pill style={{ background: m.bg, borderColor: m.border, color: m.color }}>{m.label}</Pill>
+  return <Pill style={{ background: bg, borderColor: border, color }}>{label}</Pill>
 }
 
 function SourceBadge({ source }) {
   const map = {
-    Adzuna:    { label: '🇮🇳 Adzuna',    bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.25)', color: '#34d399' },
-    Remotive:  { label: '🌐 Remotive',   bg: 'rgba(59,130,246,0.1)',  border: 'rgba(59,130,246,0.25)', color: '#93c5fd' },
-    Arbeitnow: { label: '🇪🇺 Arbeitnow', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.25)', color: '#c4b5fd' },
+    Internshala: { label: '🇮🇳 Internshala', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)',  color: '#6ee7b7' },
+    Adzuna:      { label: '🇮🇳 Adzuna',      bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)',  color: '#34d399' },
+    Remotive:    { label: '🌐 Remotive',     bg: 'rgba(59,130,246,0.1)',  border: 'rgba(59,130,246,0.25)', color: '#93c5fd' },
+    Arbeitnow:   { label: '🌍 Arbeitnow',   bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
   }
   const m = map[source] || map.Arbeitnow
   return <Pill style={{ background: m.bg, borderColor: m.border, color: m.color }}>{m.label}</Pill>
@@ -253,16 +266,16 @@ export default function InternshipRecommendations() {
   const [suggestions,  setSuggestions]  = useState([])
   const [showFilters,  setShowFilters]  = useState(false)
 
-  // Committed search filters
+  // Committed search filters — default location to India
   const [keyword,    setKeyword]    = useState('')
-  const [location,   setLocation]   = useState('')
+  const [location,   setLocation]   = useState('India')
   const [degree,     setDegree]     = useState('all')
   const [jobType,    setJobType]    = useState('all')
   const [remoteOnly, setRemoteOnly] = useState(false)
 
   // Pending (not yet committed) input values
   const [inputKw,  setInputKw]  = useState('')
-  const [inputLoc, setInputLoc] = useState('')
+  const [inputLoc, setInputLoc] = useState('India')
 
   const abortRef     = useRef(null)
   // Track if degree was pre-filled from profile so we only do it once
@@ -387,21 +400,30 @@ export default function InternshipRecommendations() {
   const applyKw    = v => { setKeyword(v); setInputKw(v); setPage(1) }
   const onSuggest  = v => { setKeyword(v); setInputKw(v); setPage(1) }
 
-  // Group jobs into sections by source_country
+  // Group jobs by india_score tier for section labels
   const sections = (() => {
     if (!jobs.length) return []
-    const groups = { IN: [], REMOTE: [], INTL: [], OTHER: [] }
+    const chennai = [], tn = [], india = [], remote = [], intl = []
     jobs.forEach(j => {
-      if      (j.source_country === 'IN')     groups.IN.push(j)
-      else if (j.source_country === 'REMOTE') groups.REMOTE.push(j)
-      else if (j.source_country === 'INTL')   groups.INTL.push(j)
-      else                                     groups.OTHER.push(j)
+      const sc = j.india_score ?? 0
+      const loc = (j.location || '').toLowerCase()
+      if (sc >= 10 || loc.includes('chennai') || loc.includes('coimbatore') || loc.includes('madras'))
+        chennai.push(j)
+      else if (sc >= 9 || loc.includes('tamil') || ['madurai','trichy','salem','vellore'].some(c => loc.includes(c)))
+        tn.push(j)
+      else if (j.source_country === 'IN' || sc >= 7)
+        india.push(j)
+      else if (j.source_country === 'REMOTE' || sc >= 3)
+        remote.push(j)
+      else
+        intl.push(j)
     })
     return [
-      groups.IN.length     ? { key: 'IN',     label: '🇮🇳 India Jobs',         items: groups.IN     } : null,
-      groups.REMOTE.length ? { key: 'REMOTE', label: '🌐 Remote Opportunities', items: groups.REMOTE } : null,
-      groups.INTL.length   ? { key: 'INTL',   label: '🌍 International Jobs',   items: groups.INTL   } : null,
-      groups.OTHER.length  ? { key: 'OTHER',  label: '📋 Other Listings',       items: groups.OTHER  } : null,
+      chennai.length ? { key: 'chennai', label: '🌊 Chennai & Coimbatore',       items: chennai } : null,
+      tn.length      ? { key: 'tn',      label: '🗺 Tamil Nadu',                  items: tn      } : null,
+      india.length   ? { key: 'india',   label: '🇮🇳 India',                      items: india   } : null,
+      remote.length  ? { key: 'remote',  label: '🌐 Remote Opportunities',        items: remote  } : null,
+      intl.length    ? { key: 'intl',    label: '🌍 International (Fallback)',    items: intl    } : null,
     ].filter(Boolean)
   })()
 
@@ -445,27 +467,18 @@ export default function InternshipRecommendations() {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* ── DEBUG PANEL (always visible) ───────────────── */}
+      {/* India-first notice banner */}
       <div style={{
-        background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+        background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)',
         borderRadius: 12, padding: '10px 16px', fontSize: 12, color: '#94a3b8',
-        display: 'flex', flexWrap: 'wrap', gap: '6px 20px',
+        display: 'flex', alignItems: 'center', gap: 10,
       }}>
-        <span style={{ color: '#818cf8', fontWeight: 700 }}>DEBUG</span>
-        <span>loading: <b style={{ color: loading ? '#f87171' : '#34d399' }}>{String(loading)}</b></span>
-        <span>error: <b style={{ color: error ? '#f87171' : '#34d399' }}>{error ? 'YES' : 'none'}</b></span>
-        <span>jobs.length: <b style={{ color: '#fbbf24' }}>{jobs.length}</b></span>
-        <span>total: <b style={{ color: '#fbbf24' }}>{total}</b></span>
-        <span>page: <b style={{ color: '#fbbf24' }}>{page}/{totalPages}</b></span>
-        <span>sections: <b style={{ color: '#a78bfa' }}>{sections.length}</b></span>
-        {jobs.length > 0 && (
-          <span>
-            first job:{' '}
-            <b style={{ color: '#f1f5f9' }}>
-              &quot;{jobs[0].job_title}&quot; @ {jobs[0].company_name} [{jobs[0].source_country}]
-            </b>
-          </span>
-        )}
+        <span style={{ fontSize: 18, flexShrink: 0 }}>🇮🇳</span>
+        <span style={{ color: '#6ee7b7', fontWeight: 700, flexShrink: 0 }}>India First:</span>
+        <span style={{ color: '#64748b' }}>
+          Results ranked: Chennai → Tamil Nadu → India → Remote → International.
+          Powered by Internshala (India), Adzuna India, Remotive, and Arbeitnow.
+        </span>
       </div>
 
       {/* ── Header ─────────────────────────────────────── */}
@@ -520,22 +533,22 @@ export default function InternshipRecommendations() {
           ))}
         </div>
 
-        {/* Source status */}
+        {/* Source status — India sources shown first */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: '#475569' }}>Sources:</span>
-          {['Adzuna', 'Remotive', 'Arbeitnow'].map(src => {
+          {[
+            { name: 'Internshala', colors: ['rgba(16,185,129,0.15)', 'rgba(16,185,129,0.4)', '#6ee7b7'], flag: '🇮🇳' },
+            { name: 'Adzuna',      colors: ['rgba(16,185,129,0.10)', 'rgba(16,185,129,0.3)', '#34d399'], flag: '🇮🇳' },
+            { name: 'Remotive',    colors: ['rgba(59,130,246,0.12)', 'rgba(59,130,246,0.3)', '#93c5fd'], flag: '🌐' },
+            { name: 'Arbeitnow',   colors: ['rgba(100,116,139,0.1)', 'rgba(100,116,139,0.25)', '#94a3b8'], flag: '🌍' },
+          ].map(({ name: src, colors, flag }) => {
             const active = sourcesUsed.includes(src)
             const ss = sourceStatus.find(s => s.name === src)
             const err = ss && !ss.ok
-            const colors = {
-              Adzuna:    ['rgba(16,185,129,0.12)', 'rgba(16,185,129,0.3)',  '#34d399'],
-              Remotive:  ['rgba(59,130,246,0.12)',  'rgba(59,130,246,0.3)',  '#93c5fd'],
-              Arbeitnow: ['rgba(168,85,247,0.12)', 'rgba(168,85,247,0.3)', '#c4b5fd'],
-            }[src]
             return (
               <span
                 key={src}
-                title={err ? ss.error : ss ? `${ss.count} jobs` : 'Not active'}
+                title={err ? ss?.error : ss ? `${ss.count} listings` : 'Not active'}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
@@ -546,7 +559,7 @@ export default function InternshipRecommendations() {
                 }}
               >
                 {active ? <CheckCircle2 size={11} /> : err ? <AlertCircle size={11} /> : null}
-                {src}
+                {flag} {src}
                 {active && ss?.count > 0 && <span style={{ opacity: 0.6 }}>({ss.count})</span>}
                 {loading && active && <span style={{ width: 9, height: 9, borderRadius: '50%', border: '1.5px solid currentColor', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />}
               </span>
@@ -694,15 +707,15 @@ export default function InternshipRecommendations() {
       {/* ── Smart match tip ─────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderRadius: 20,
-        background: 'linear-gradient(to right, rgba(147,51,234,0.12), rgba(99,102,241,0.08))',
-        border: '1px solid rgba(147,51,234,0.2)',
+        background: 'linear-gradient(to right, rgba(16,185,129,0.08), rgba(99,102,241,0.06))',
+        border: '1px solid rgba(16,185,129,0.18)',
       }}>
-        <Sparkles size={15} color="#a78bfa" style={{ flexShrink: 0 }} />
+        <Sparkles size={15} color="#34d399" style={{ flexShrink: 0 }} />
         <p style={{ fontSize: 13, color: '#cbd5e1' }}>
-          <span style={{ color: '#c4b5fd', fontWeight: 700 }}>Smart Match: </span>
+          <span style={{ color: '#6ee7b7', fontWeight: 700 }}>Smart Match (India-First): </span>
           {user?.degree_program
-            ? `Showing jobs for ${user.degree_program}${user.specialization ? ` — ${user.specialization}` : ''}. India jobs shown first.`
-            : 'Log in to get personalised job recommendations based on your degree.'}
+            ? `Matching ${user.degree_program}${user.specialization ? ` · ${user.specialization}` : ''} roles in India. Chennai → Tamil Nadu → India → Remote → International.`
+            : 'Indian opportunities prioritised — Chennai, Tamil Nadu, Bangalore, Hyderabad, Pune, Mumbai, Delhi.'}
         </p>
       </div>
 

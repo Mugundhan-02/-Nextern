@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Brain, CheckCircle2, AlertTriangle, Loader2,
   GraduationCap, Wifi, WifiOff, Lightbulb, XCircle,
@@ -62,18 +62,23 @@ function getBrand(companyName) {
 
 // ─────────────────────────────────────────────────────────────────
 // Initial form state
+// NOTE: degree must match an actual value from degreePrograms so the
+// specialization dropdown is never out-of-sync on first render.
+// We can't import degreePrograms here (circular), so we use 'BCA'
+// which is always the first entry. If degreePrograms ever changes,
+// update this to degreePrograms[0].value.
 // ─────────────────────────────────────────────────────────────────
 const initialForm = {
-  degree:         'BE/BTech',
-  specialization: '',
+  degree:          'BCA',   // ← was 'BE/BTech' which is NOT a real dropdown option
+  specialization:  '',
   careerInterests: [],
-  cgpa:           '',
-  skills:         '',
-  projects:       '2',
-  internships:    '1',
-  backlogs:       '0',
-  communication:  'Good',
-  leetcode:       '',
+  cgpa:            '',
+  skills:          '',
+  projects:        '2',
+  internships:     '1',
+  backlogs:        '0',
+  communication:   'Good',
+  leetcode:        '',
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -224,8 +229,17 @@ export default function PlacementPrediction() {
     ? apiCompanies.map((c, i) => ({ ...c, id: i, ...getBrand(c.company) }))
     : localCompanies.slice().sort((a, b) => b.confidence - a.confidence)
 
-  const specializations = specializationsByDegree[form.degree] ?? []
-  const careerOptions   = careerInterestsByDegree[form.degree] ?? []
+  // ── Specializations and career options — always in sync with degree ─────────
+  // useMemo guarantees these recompute atomically when form.degree changes,
+  // preventing any render where the old specializations list is shown.
+  const specializations = useMemo(
+    () => specializationsByDegree[form.degree] ?? [],
+    [form.degree]
+  )
+  const careerOptions = useMemo(
+    () => careerInterestsByDegree[form.degree] ?? [],
+    [form.degree]
+  )
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -256,13 +270,20 @@ export default function PlacementPrediction() {
               </select>
             </div>
 
-            {/* Specialization */}
+            {/* Specialization — key={form.degree} forces React to fully
+                re-mount this <select> whenever the degree changes, so
+                no stale DOM value from the previous degree can persist. */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Specialization / Stream
               </label>
-              <select name="specialization" value={form.specialization}
-                onChange={handleChange} className="select-field">
+              <select
+                key={form.degree}
+                name="specialization"
+                value={form.specialization}
+                onChange={handleChange}
+                className="select-field"
+              >
                 <option value="" className="bg-[#141c35]">— Select Specialization —</option>
                 {specializations.map((s) => (
                   <option key={s} value={s} className="bg-[#141c35]">{s}</option>
