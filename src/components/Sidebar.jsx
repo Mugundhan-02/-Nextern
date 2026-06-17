@@ -79,7 +79,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </div>
         {!collapsed && (
           <div>
-            <h1 className="text-sm font-bold text-white leading-tight">SkillAI</h1>
+            <h1 className="text-sm font-bold text-white leading-tight">Nextern</h1>
             <p className="text-xs text-slate-400 leading-tight">Placement Intelligence</p>
           </div>
         )}

@@ -89,7 +89,7 @@ export default function Login() {
             <Brain className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-black text-white">Welcome back</h1>
-          <p className="text-sm text-slate-400 mt-1">Sign in to your SkillAI account</p>
+          <p className="text-sm text-slate-400 mt-1">Sign in to your Nextern account</p>
         </div>
 
         {/* Card */}
@@ -227,7 +227,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          SkillAI — Placement Intelligence Platform
+          Nextern — Placement Intelligence Platform
         </p>
       </div>
     </div>

@@ -2,7 +2,11 @@
 
 ## Overview
 
+<<<<<<< HEAD
 Nextern is a full-stack Placement Intelligence Platform designed to help students assess their placement readiness, improve their resumes, identify skill gaps, and discover relevant internship opportunities.
+=======
+Nextern is an AI-powered placement intelligence platform designed to help students evaluate their placement readiness, analyze resumes using ATS-style scoring, identify skill gaps, and discover relevant internship opportunities.
+>>>>>>> 17ef968 (Rebrand project to Nextern and update README)
 
 The platform combines machine learning, resume analytics, and career insights into a single student-focused application.
 
@@ -77,6 +81,7 @@ The platform combines machine learning, resume analytics, and career insights in
 
 ## Application Modules
 
+<<<<<<< HEAD
 * User Authentication
 * Dashboard
 * Placement Prediction
@@ -85,6 +90,30 @@ The platform combines machine learning, resume analytics, and career insights in
 * Internship Recommendations
 * Profile Management
 * History Tracking
+=======
+```text
+Nextern/
+│
+├── backend/
+│   ├── routes/
+│   ├── datasets/
+│   ├── models/
+│   ├── main.py
+│   ├── predictor.py
+│   ├── resume_analyzer.py
+│   └── database.py
+│
+├── src/
+│   ├── pages/
+│   ├── components/
+│   ├── api/
+│   └── context/
+│
+├── public/
+├── package.json
+└── README.md
+```
+>>>>>>> 17ef968 (Rebrand project to Nextern and update README)
 
 ---
 

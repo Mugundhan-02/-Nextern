@@ -89,7 +89,7 @@ function HeroSection({ user }) {
 
           <h1 className="anim-slide-up-1 text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-3">
             Welcome to{' '}
-            <span className="gradient-text-hero">SkillAI</span>
+            <span className="gradient-text-hero">Nextern</span>
           </h1>
 
           <p className="anim-slide-up-2 text-lg sm:text-xl text-slate-300 font-medium mb-2">
@@ -97,7 +97,7 @@ function HeroSection({ user }) {
           </p>
 
           <p className="anim-slide-up-3 text-sm text-slate-500 max-w-xl mb-8 leading-relaxed">
-            SkillAI combines Machine Learning, ATS Resume Analysis, and Career Intelligence
+            Nextern combines Machine Learning, ATS Resume Analysis, and Career Intelligence
             to help you understand your placement readiness and land your dream role.
           </p>
 
@@ -155,7 +155,7 @@ function AboutSection() {
       <div className={`transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <div className="flex items-center gap-3 mb-2">
           <div className="w-1 h-6 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500" />
-          <h2 className="text-xl font-bold text-white">What is SkillAI?</h2>
+          <h2 className="text-xl font-bold text-white">What is Nextern?</h2>
         </div>
         <p className="text-sm text-slate-400 mb-6 ml-4">
           An intelligent career platform built for students and freshers — not just another analytics dashboard.
@@ -645,7 +645,7 @@ function AIRecommendations({ stats, user }) {
             </div>
           </div>
           <div>
-            <p className="text-sm font-bold text-white">SkillAI Coach</p>
+            <p className="text-sm font-bold text-white">Nextern Coach</p>
             <p className="text-xs text-slate-500">Here are your next steps, {user?.full_name?.split(' ')[0] || 'Student'}:</p>
           </div>
           <div className="ml-auto flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
@@ -850,7 +850,7 @@ function DashboardFooter() {
           <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-sm font-bold text-white tracking-wide">SkillAI</span>
+          <span className="text-sm font-bold text-white tracking-wide">Nextern</span>
           <span className="text-xs text-slate-600 font-medium">v1.0</span>
         </div>
 
@@ -932,7 +932,7 @@ function DashboardFooter() {
 
         {/* Copyright */}
         <p style={{ fontSize: 10, color: '#334155', paddingBottom: 8 }}>
-          © 2026 SkillAI · AI-Powered Career Intelligence Platform
+          © 2026 Nextern · AI-Powered Career Intelligence Platform
         </p>
       </div>
     </footer>

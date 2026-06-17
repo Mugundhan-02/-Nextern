@@ -1,5 +1,5 @@
 // src/pages/Signup.jsx
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Brain, User, Mail, Lock, Eye, EyeOff,
@@ -10,9 +10,8 @@ import SearchableSelect from '../components/SearchableSelect'
 import {
   DEGREE_GROUPS,
   DEGREE_LIST,
-  SPECIALIZATION_GROUPS,
-  SPECIALIZATIONS,
 } from '../data/degreeData'
+import { specializationsByDegree } from '../data/dummyData'
 import {
   validateEmail,
   validatePassword,
@@ -58,6 +57,11 @@ export default function Signup() {
 
   const pwScore     = passwordStrengthScore(form.password)
   const isDuplicate = error.toLowerCase().includes('already registered')
+
+  // ── Derived specializations based on selected degree program ─────────
+  const validSpecializations = useMemo(() => {
+    return specializationsByDegree[form.degree_program] ?? []
+  }, [form.degree_program])
 
   // ── Handlers ──────────────────────────────────────────────────────────
   const set = (k) => (e) => {
@@ -129,7 +133,7 @@ export default function Signup() {
             <Brain className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-black text-white">Create your account</h1>
-          <p className="text-sm text-slate-400 mt-1">Join SkillAI — it's free</p>
+          <p className="text-sm text-slate-400 mt-1">Join Nextern — it's free</p>
         </div>
 
         {/* Card */}
@@ -345,7 +349,7 @@ export default function Signup() {
                   groups={DEGREE_GROUPS}
                   options={DEGREE_LIST}
                   value={form.degree_program}
-                  onChange={deg => setForm(f => ({ ...f, degree_program: deg }))}
+                  onChange={deg => setForm(f => ({ ...f, degree_program: deg, specialization: '' }))}
                   placeholder="e.g. BTech, BCA…"
                 />
               </div>
@@ -356,11 +360,11 @@ export default function Signup() {
                 </label>
                 <SearchableSelect
                   id="signup-spec"
-                  groups={SPECIALIZATION_GROUPS}
-                  options={SPECIALIZATIONS}
+                  options={validSpecializations}
                   value={form.specialization}
                   onChange={spec => setForm(f => ({ ...f, specialization: spec }))}
-                  placeholder="e.g. Data Science…"
+                  placeholder={form.degree_program ? "e.g. Data Science…" : "Select degree first"}
+                  disabled={!form.degree_program}
                 />
               </div>
             </div>
@@ -400,7 +404,7 @@ export default function Signup() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          SkillAI — Placement Intelligence Platform
+          Nextern — Placement Intelligence Platform
         </p>
       </div>
     </div>
